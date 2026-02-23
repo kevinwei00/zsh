@@ -23,67 +23,89 @@ export PGDATA=/usr/local/var/postgres
 export PGUSER=postgres
 
 #====================================================================================================
-# NVM
+# NVM (lazy-loaded — only sourced on first use of nvm/node/npm/npx)
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+_nvm_lazy_load() {
+  unfunction nvm node npm npx 2>/dev/null
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+}
+
+nvm()  { _nvm_lazy_load; nvm  "$@" }
+node() { _nvm_lazy_load; node "$@" }
+npm()  { _nvm_lazy_load; npm  "$@" }
+npx()  { _nvm_lazy_load; npx  "$@" }
 
 #====================================================================================================
-# NVMRC
-autoload -U add-zsh-hook
-load-nvmrc() {
+# NVMRC (auto-switch node version on cd, only when .nvmrc exists)
+_auto_nvmrc() {
+  [[ -f .nvmrc ]] || return
+  # Ensure nvm is loaded
+  if ! typeset -f nvm_find_nvmrc > /dev/null 2>&1; then
+    _nvm_lazy_load
+  fi
   local node_version="$(nvm version)"
-  local nvmrc_path="$(nvm_find_nvmrc)"
-
-  if [ -n "$nvmrc_path" ]; then
-    local nvmrc_node_version=$(nvm version "$(cat "${nvmrc_path}")")
-
-    if [ "$nvmrc_node_version" = "N/A" ]; then
-      nvm install
-    elif [ "$nvmrc_node_version" != "$node_version" ]; then
-      nvm use
-    fi
-  elif [ "$node_version" != "$(nvm version default)" ]; then
-    echo "Reverting to nvm default version"
-    nvm use default
+  local nvmrc_node_version=$(nvm version "$(cat .nvmrc)")
+  if [[ "$nvmrc_node_version" = "N/A" ]]; then
+    nvm install
+  elif [[ "$nvmrc_node_version" != "$node_version" ]]; then
+    nvm use
   fi
 }
-add-zsh-hook chpwd load-nvmrc
-load-nvmrc
+
+autoload -U add-zsh-hook
+add-zsh-hook chpwd _auto_nvmrc
+
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
 
 #====================================================================================================
-# PYENV
-export PATH="$HOME/.pyenv/bin:$PATH"
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
+# PYENV (lazy-loaded — shims are on PATH immediately, full init deferred)
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
+export PYENV_SHELL=zsh
+
+_pyenv_lazy_load() {
+  unfunction pyenv 2>/dev/null
+  eval "$(command pyenv init -)"
+  eval "$(command pyenv virtualenv-init -)"
+}
+
+pyenv() { _pyenv_lazy_load; pyenv "$@" }
 
 #====================================================================================================
-
 # color stuff
 autoload -U colors && colors
 export LSCOLORS="Gxfxcxdxbxegedabagacad"
 
+# Completion system with daily cache
+autoload -Uz compinit
+if [[ -f "$HOME/.zcompdump" ]] && (( $(date +%s) - $(stat -f %m "$HOME/.zcompdump") < 86400 )); then
+  compinit -C
+else
+  compinit
+fi
 # uppercase autocomplete
-autoload -Uz compinit && compinit
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 
-# python prompt
+# python prompt (reads version file directly — no subprocess)
 pyenv_prompt() {
-  if [[ -n $PYENV_SHELL ]]; then
+  local vfile="${PYENV_ROOT:-$HOME/.pyenv}/version"
+  if [[ -f "$vfile" ]]; then
     local version
-    version=${(@)$(pyenv version)[1]}
-    if [[ $version != system ]]; then
+    read -r version < "$vfile"
+    if [[ -n "$version" && "$version" != "system" ]]; then
       echo -n "(python $version)"
     fi
   fi
 }
 
-# nvm prompt
+# nvm prompt (reads from NVM_BIN path — no subprocess)
 nvm_prompt() {
-  which nvm &>/dev/null || return
-  local nvm_prompt=${$(nvm current)#v}
-  echo "(node ${nvm_prompt:gs/%/%%})"
+  if [[ -n "$NVM_BIN" ]]; then
+    local ver="${NVM_BIN:h:t}"
+    echo "(node ${ver#v})"
+  fi
 }
 
 # git prompt
