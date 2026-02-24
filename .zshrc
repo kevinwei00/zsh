@@ -13,20 +13,16 @@ alias npmlist='npm list -g --depth 0'
 
 #====================================================================================================
 # Path stuff
+export NVM_DIR="$HOME/.nvm"
+export PYENV_ROOT="$HOME/.pyenv"
+
 export PATH="$NVM_DIR/versions/node/v22.21.1/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
-
-#====================================================================================================
-# Set location of storage area for PostgreSQL
-export PGDATA=/usr/local/var/postgres
-
-# Override the default user in PSQL
-export PGUSER=postgres
+export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
 
 #====================================================================================================
 # NVM (lazy-loaded — only sourced on first use of nvm/node/npm/npx)
-export NVM_DIR="$HOME/.nvm"
-
 _nvm_lazy_load() {
   unfunction nvm node npm npx 2>/dev/null
   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
@@ -58,12 +54,8 @@ _auto_nvmrc() {
 autoload -U add-zsh-hook
 add-zsh-hook chpwd _auto_nvmrc
 
-export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
-
 #====================================================================================================
 # PYENV (lazy-loaded — shims are on PATH immediately, full init deferred)
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
 export PYENV_SHELL=zsh
 
 _pyenv_lazy_load() {
