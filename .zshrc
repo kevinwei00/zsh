@@ -12,8 +12,9 @@ alias clean='git branch | grep -v "master" | xargs git branch -D && git remote p
 alias npmlist='npm list -g --depth 0'
 
 #====================================================================================================
-# Enables VS Code `code` in command line
-export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+# Path stuff
+export PATH="$NVM_DIR/versions/node/v22.21.1/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 #====================================================================================================
 # Set location of storage area for PostgreSQL
